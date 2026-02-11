@@ -1,7 +1,5 @@
 Alibaba Cloud Lindorm Data Processing Terraform Module
 
-================================================ 
-
 # terraform-alicloud-lindorm-data-process
 
 English | [简体中文](https://github.com/alibabacloud-automation/terraform-alicloud-lindorm-data-process/blob/main/README-CN.md)
@@ -14,14 +12,8 @@ This module creates a complete Lindorm data processing environment with VPC, ECS
 
 ```terraform
 data "alicloud_zones" "default" {
-  available_disk_category     = "cloud_efficiency"
-  available_resource_creation = "VSwitch"
-}
-
-data "alicloud_instance_types" "default" {
-  availability_zone = data.alicloud_zones.default.zones[0].id
-  cpu_core_count    = 2
-  memory_size       = 4
+  available_disk_category = "cloud_essd"
+  available_instance_type = "ecs.e-c1m4.2xlarge"
 }
 
 data "alicloud_images" "default" {
@@ -34,53 +26,41 @@ data "alicloud_images" "default" {
 module "lindorm_data_process" {
   source = "alibabacloud-automation/lindorm-data-process/alicloud"
 
-  # Common configuration
-  common_config = {
-    name_prefix = "lindorm-demo"
-  }
-
-  # VPC configuration
+  # VPC configuration (only required fields)
   vpc_config = {
     cidr_block = "192.168.0.0/16"
-    vpc_name   = "lindorm-demo-vpc"
   }
 
-  # VSwitch configuration
+  # VSwitch configuration (only required fields)
   vswitch_config = {
-    cidr_block   = "192.168.0.0/24"
-    zone_id      = data.alicloud_zones.default.zones[0].id
-    vswitch_name = "lindorm-demo-vswitch"
+    cidr_block = "192.168.0.0/24"
+    zone_id    = data.alicloud_zones.default.zones[length(data.alicloud_zones.default.zones) - 1].id
   }
 
-  # ECS instance configuration
+  # ECS instance configuration (only required fields)
   instance_config = {
-    availability_zone          = data.alicloud_zones.default.zones[0].id
-    password                   = "YourPassword123!"
-    instance_type              = data.alicloud_instance_types.default.instance_types[0].id
-    system_disk_category       = "cloud_efficiency"
-    image_id                   = data.alicloud_images.default.images[0].id
-    instance_name              = "lindorm-demo-ecs"
-    internet_max_bandwidth_out = 5
+    password             = "YourPassword123!"
+    instance_type        = "ecs.e-c1m4.2xlarge"
+    system_disk_category = "cloud_essd"
+    image_id             = data.alicloud_images.default.images[0].id
   }
 
-  # Lindorm instance configuration
+  # Lindorm instance configuration (only required fields)
   lindorm_config = {
     instance_storage            = 160
-    zone_id                     = data.alicloud_zones.default.zones[0].id
     payment_type                = "PayAsYouGo"
     search_engine_specification = "lindorm.g.xlarge"
     search_engine_node_count    = 2
     table_engine_specification  = "lindorm.g.xlarge"
     table_engine_node_count     = 2
     disk_category               = "cloud_efficiency"
-    instance_name               = "lindorm-demo-instance"
   }
 
-  # ECS command configuration
+  # ECS command configuration (only required fields)
   ecs_command_config = {
-    type        = "RunShellScript"
-    timeout     = 300
-    name        = "lindorm-demo-command"
+    type    = "RunShellScript"
+    timeout = 300
+    name    = "lindorm-demo-command"
     working_dir = "/root"
   }
 }
@@ -102,7 +82,7 @@ module "lindorm_data_process" {
 
 | Name | Version |
 |------|---------|
-| <a name="provider_alicloud"></a> [alicloud](#provider\_alicloud) | 1.270.0 |
+| <a name="provider_alicloud"></a> [alicloud](#provider\_alicloud) | >= 1.212.0 |
 
 ## Modules
 
@@ -126,13 +106,13 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_custom_ecs_command_script"></a> [custom\_ecs\_command\_script](#input\_custom\_ecs\_command\_script) | Custom ECS command script content. If not provided, the default script will be used. | `string` | `null` | no |
-| <a name="input_ecs_command_config"></a> [ecs\_command\_config](#input\_ecs\_command\_config) | ECS command configuration parameters. The attributes 'type', 'timeout', 'name', 'working\_dir' are required. | <pre>object({<br/>    type        = string<br/>    timeout     = number<br/>    name        = string<br/>    working_dir = string<br/>  })</pre> | <pre>{<br/>  "name": null,<br/>  "timeout": null,<br/>  "type": null,<br/>  "working_dir": null<br/>}</pre> | no |
+| <a name="input_ecs_command_config"></a> [ecs\_command\_config](#input\_ecs\_command\_config) | ECS command configuration parameters. The attributes 'type', 'timeout', 'name', 'working\_dir' are required. | <pre>object({<br/>    type        = optional(string, "RunShellScript")<br/>    timeout     = optional(number, 300)<br/>    name        = optional(string, "auto-75ca2a13")<br/>    working_dir = optional(string, "/root")<br/>  })</pre> | `{}` | no |
 | <a name="input_ecs_invocation_config"></a> [ecs\_invocation\_config](#input\_ecs\_invocation\_config) | ECS invocation configuration parameters. | <pre>object({<br/>    timeout_create = optional(string, "60m")<br/>  })</pre> | `{}` | no |
-| <a name="input_instance_config"></a> [instance\_config](#input\_instance\_config) | ECS instance configuration parameters. The attributes 'availability\_zone', 'password', 'instance\_type', 'system\_disk\_category', 'image\_id' are required. | <pre>object({<br/>    availability_zone          = string<br/>    password                   = string<br/>    instance_type              = string<br/>    system_disk_category       = string<br/>    image_id                   = string<br/>    instance_name              = optional(string, "default-ecs-instance")<br/>    internet_max_bandwidth_out = optional(number, 5)<br/>    tags                       = optional(map(string), {})<br/>  })</pre> | <pre>{<br/>  "availability_zone": null,<br/>  "image_id": null,<br/>  "instance_type": null,<br/>  "password": null,<br/>  "system_disk_category": null<br/>}</pre> | no |
-| <a name="input_lindorm_config"></a> [lindorm\_config](#input\_lindorm\_config) | Lindorm instance configuration parameters. The attributes 'instance\_storage', 'zone\_id', 'payment\_type', 'search\_engine\_specification', 'search\_engine\_node\_count', 'table\_engine\_specification', 'table\_engine\_node\_count', 'disk\_category' are required. | <pre>object({<br/>    instance_storage            = number<br/>    zone_id                     = string<br/>    payment_type                = string<br/>    search_engine_specification = string<br/>    search_engine_node_count    = number<br/>    table_engine_specification  = string<br/>    table_engine_node_count     = number<br/>    disk_category               = string<br/>    instance_name               = optional(string, "default-lindorm-instance")<br/>    tags                        = optional(map(string), {})<br/>  })</pre> | <pre>{<br/>  "disk_category": null,<br/>  "instance_storage": null,<br/>  "payment_type": null,<br/>  "search_engine_node_count": null,<br/>  "search_engine_specification": null,<br/>  "table_engine_node_count": null,<br/>  "table_engine_specification": null,<br/>  "zone_id": null<br/>}</pre> | no |
+| <a name="input_instance_config"></a> [instance\_config](#input\_instance\_config) | ECS instance configuration parameters. The attributes 'password', 'instance\_type', 'system\_disk\_category', 'image\_id' are required. | <pre>object({<br/>    password                   = string<br/>    instance_type              = string<br/>    system_disk_category       = string<br/>    image_id                   = string<br/>    instance_name              = optional(string, "default-ecs-instance")<br/>    internet_max_bandwidth_out = optional(number, 5)<br/>    tags                       = optional(map(string), {})<br/>  })</pre> | <pre>{<br/>  "image_id": null,<br/>  "instance_type": null,<br/>  "password": null,<br/>  "system_disk_category": null<br/>}</pre> | no |
+| <a name="input_lindorm_config"></a> [lindorm\_config](#input\_lindorm\_config) | Lindorm instance configuration parameters. The attributes 'instance\_storage', 'payment\_type', 'search\_engine\_specification', 'search\_engine\_node\_count', 'table\_engine\_specification', 'table\_engine\_node\_count', 'disk\_category' are required. | <pre>object({<br/>    instance_storage            = number<br/>    payment_type                = string<br/>    search_engine_specification = string<br/>    search_engine_node_count    = number<br/>    table_engine_specification  = string<br/>    table_engine_node_count     = number<br/>    disk_category               = string<br/>    instance_name               = optional(string, "default-lindorm-instance")<br/>    tags                        = optional(map(string), {})<br/>  })</pre> | <pre>{<br/>  "disk_category": null,<br/>  "instance_storage": null,<br/>  "payment_type": null,<br/>  "search_engine_node_count": null,<br/>  "search_engine_specification": null,<br/>  "table_engine_node_count": null,<br/>  "table_engine_specification": null<br/>}</pre> | no |
 | <a name="input_security_group_config"></a> [security\_group\_config](#input\_security\_group\_config) | Security group configuration parameters. | <pre>object({<br/>    security_group_name = optional(string, "default-security-group")<br/>    tags                = optional(map(string), {})<br/>  })</pre> | `{}` | no |
-| <a name="input_vpc_config"></a> [vpc\_config](#input\_vpc\_config) | VPC configuration parameters. The attribute 'cidr\_block' is required. | <pre>object({<br/>    cidr_block = string<br/>    vpc_name   = optional(string, "default-vpc")<br/>    tags       = optional(map(string), {})<br/>  })</pre> | <pre>{<br/>  "cidr_block": null<br/>}</pre> | no |
-| <a name="input_vswitch_config"></a> [vswitch\_config](#input\_vswitch\_config) | VSwitch configuration parameters. The attributes 'cidr\_block' and 'zone\_id' are required. | <pre>object({<br/>    cidr_block   = string<br/>    zone_id      = string<br/>    vswitch_name = optional(string, "default-vswitch")<br/>    tags         = optional(map(string), {})<br/>  })</pre> | <pre>{<br/>  "cidr_block": null,<br/>  "zone_id": null<br/>}</pre> | no |
+| <a name="input_vpc_config"></a> [vpc\_config](#input\_vpc\_config) | VPC configuration parameters. The attribute 'cidr\_block' is required. | <pre>object({<br/>    cidr_block = string<br/>    vpc_name   = optional(string, "default-vpc")<br/>    tags       = optional(map(string), {})<br/>  })</pre> | n/a | yes |
+| <a name="input_vswitch_config"></a> [vswitch\_config](#input\_vswitch\_config) | VSwitch configuration parameters. The attributes 'cidr\_block' and 'zone\_id' are required. | <pre>object({<br/>    cidr_block   = string<br/>    zone_id      = string<br/>    vswitch_name = optional(string, "default-vswitch")<br/>    tags         = optional(map(string), {})<br/>  })</pre> | n/a | yes |
 
 ## Outputs
 
